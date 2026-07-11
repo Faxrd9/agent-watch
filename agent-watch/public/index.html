@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Agent Watch</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <p class="eyebrow">LOCAL OBSERVABILITY</p>
+          <h1>Agent Watch</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div id="connection" class="connection"><i></i><span>正在连接</span></div>
+        <button id="miniWindowButton" class="ghost-button" type="button">小窗模式</button>
+        <button id="clearButton" class="ghost-button" type="button">清空界面记录</button>
+        <button id="exportButton" class="ghost-button" type="button">导出脱敏诊断</button>
+        <button id="settingsButton" class="icon-button" type="button" aria-label="设置">⚙</button>
+      </div>
+    </header>
+
+    <section class="privacy-banner">
+      <div class="privacy-icon">⌁</div>
+      <div>
+        <strong>全部数据留在本机</strong>
+        <p>观察会话日志和进程心跳；不会抓取 HTTPS 请求，也不会由 Agent Watch 上传任何内容。</p>
+      </div>
+      <span class="local-pill">127.0.0.1</span>
+    </section>
+
+    <section id="providerCards" class="provider-grid" aria-label="代理状态"></section>
+
+    <section class="workspace-grid">
+      <div class="panel activity-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">OBSERVED ACTIVITY</p>
+            <h2>它们正在看什么</h2>
+          </div>
+          <div class="filters" role="group" aria-label="事件筛选">
+            <button class="filter is-active" data-provider="all" type="button">全部</button>
+            <button class="filter" data-provider="codex" type="button">Codex</button>
+            <button class="filter" data-provider="claude" type="button">Claude</button>
+          </div>
+        </div>
+        <div id="eventList" class="event-list"></div>
+      </div>
+
+      <aside class="side-column">
+        <section class="panel explainer">
+          <p class="eyebrow">HOW TO READ</p>
+          <h2>状态不是猜谜</h2>
+          <div class="signal-list">
+            <div><i class="signal active"></i><span><b>正在活动</b>日志更新或 CPU 有变化</span></div>
+            <div><i class="signal waiting"></i><span><b>等待中</b>请求未结束，暂时没有新事件</span></div>
+            <div><i class="signal danger"></i><span><b>疑似卡住</b>未完成请求超过阈值且没有心跳</span></div>
+          </div>
+        </section>
+        <section class="panel boundary">
+          <p class="eyebrow">PRIVACY BOUNDARY</p>
+          <h2>“上传了什么”的边界</h2>
+          <p id="limitationText">可显示本地日志记录的输入、附件、文件路径、工具调用与输出摘要，但不能证明云端收到的完整加密请求内容。</p>
+          <p><b>文案说明：</b>“为保护隐私未读取”表示软件主动跳过该字段；“内容已加密、无法读取”表示本地没有解密密钥；“可见推理摘要”不等于完整思维链。</p>
+        </section>
+        <section class="panel session-files">
+          <div class="panel-head compact"><h2>正在观察的会话</h2></div>
+          <div id="observedFiles" class="file-list"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="settings-card">
+      <div class="dialog-head">
+        <div><p class="eyebrow">SETTINGS</p><h2>监控设置</h2></div>
+        <button class="icon-button" value="cancel" aria-label="关闭">×</button>
+      </div>
+      <label class="setting-row">
+        <span><b>疑似卡住阈值</b><small>请求未结束且没有日志或 CPU 心跳</small></span>
+        <select id="stallSeconds">
+          <option value="60">60 秒</option>
+          <option value="90">90 秒</option>
+          <option value="120">120 秒</option>
+          <option value="180">180 秒</option>
+          <option value="300">5 分钟</option>
+          <option value="600">10 分钟</option>
+        </select>
+      </label>
+      <label class="setting-row">
+        <span><b>显示脱敏正文预览</b><small>默认关闭；开启后显示已过滤密钥并截断的输入和输出</small></span>
+        <input id="showContent" type="checkbox" role="switch">
+      </label>
+      <label class="setting-row">
+        <span><b>最多保留记录</b><small>超出后自动淘汰最旧记录，不修改原始会话文件</small></span>
+        <select id="maxEvents">
+          <option value="50">50 条</option>
+          <option value="100">100 条</option>
+          <option value="200">200 条</option>
+          <option value="300">300 条</option>
+          <option value="500">500 条</option>
+          <option value="1000">1000 条</option>
+        </select>
+      </label>
+      <label class="setting-row">
+        <span><b>自动淘汰时间</b><small>只删除 Agent Watch 内存中的展示记录</small></span>
+        <select id="retentionMinutes">
+          <option value="15">15 分钟</option>
+          <option value="30">30 分钟</option>
+          <option value="60">1 小时</option>
+          <option value="180">3 小时</option>
+          <option value="360">6 小时</option>
+          <option value="1440">24 小时</option>
+        </select>
+      </label>
+      <div class="notice-box">设置只影响当前运行实例。Agent Watch 不保存原始会话正文。Codex 的 encrypted_content 本身已加密且本地无解密密钥；这与软件为隐私主动跳过提示正文是两种不同情况。</div>
+      <button id="saveSettings" class="primary-button" value="default" type="button">保存设置</button>
+    </form>
+  </dialog>
+
+  <dialog id="eventDialog">
+    <div class="settings-card event-detail-card">
+      <div class="dialog-head">
+        <div><p id="detailProvider" class="eyebrow">EVENT DETAIL</p><h2 id="detailTitle">事件详情</h2></div>
+        <button id="closeEventDialog" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="detailMeta" class="detail-meta"></div>
+      <div id="detailPaths" class="detail-section"></div>
+      <div class="detail-section">
+        <h3>观察到的内容</h3>
+        <pre id="detailPreview" class="detail-preview"></pre>
+        <div id="previewLocked" class="preview-locked" hidden>
+          <p>正文预览默认关闭。开启后会显示经过密钥过滤和长度限制的本地日志内容。</p>
+          <button id="enablePreview" class="primary-button" type="button">开启脱敏正文预览</button>
+        </div>
+      </div>
+      <div class="notice-box">这是本地会话日志中可观察到的内容，不代表云端最终收到的精确 TLS 请求体。</div>
+    </div>
+  </dialog>
+
+  <template id="emptyTemplate">
+    <div class="empty-state"><div class="empty-orbit"></div><h3>等待新事件</h3><p>启动 Codex 或 Claude Code 后，这里会出现工具、文件和输出活动。</p></div>
+  </template>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
