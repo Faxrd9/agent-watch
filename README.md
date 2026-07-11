@@ -177,9 +177,6 @@ git push -u origin main
 - 系统托盘与桌面通知
 - 更多版本兼容性 fixture
 
-## 贡献
-
-欢迎提交 issue 和 pull request。请勿把真实会话 JSONL、token、用户名路径或未脱敏诊断加入 issue。
 
 ## 许可证
 
